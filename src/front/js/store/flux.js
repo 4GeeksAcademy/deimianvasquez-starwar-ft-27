@@ -1,54 +1,64 @@
 const getState = ({ getStore, getActions, setStore }) => {
 	return {
 		store: {
-			message: null,
-			demo: [
-				{
-					title: "FIRST",
-					background: "white",
-					initial: "white"
-				},
-				{
-					title: "SECOND",
-					background: "white",
-					initial: "white"
-				}
-			]
+			urlBaseStarWars: "https://www.swapi.tech/api",
+			people: JSON.parse(localStorage.getItem("people")) || [],
+			favorites: []
 		},
 		actions: {
-			// Use getActions to call a function within a fuction
-			exampleFunction: () => {
-				getActions().changeColor(0, "green");
-			},
+			getAllPeople: async () => {
+				const store = getStore()
+				if (store.people <= 0) {
+					try {
+						// const response = await fetch(store.urlBaseStarWars+"people")
+						const response = await fetch(`${store.urlBaseStarWars}/people`)
+						const data = await response.json()
 
-			getMessage: async () => {
-				try{
-					// fetching data from the backend
-					const resp = await fetch(process.env.BACKEND_URL + "/api/hello")
-					const data = await resp.json()
-					setStore({ message: data.message })
-					// don't forget to return something, that is how the async resolves
-					return data;
-				}catch(error){
-					console.log("Error loading message from backend", error)
+						for (let person of data.results) {
+							const responsePerson = await fetch(person.url)
+							const dataPerson = await responsePerson.json()
+							dataPerson.result["image"] = `https://starwars-visualguide.com/assets/img/characters/${dataPerson.result.uid}.jpg`
+
+							setStore({
+								people: [...store.people, dataPerson.result]
+
+							})
+
+						}
+						localStorage.setItem("people", JSON.stringify(store.people))
+
+
+					} catch (error) {
+						console.log(error)
+					}
 				}
+
 			},
-			changeColor: (index, color) => {
-				//get the store
-				const store = getStore();
+			addFavorite: (fav) => {
+				const store = getStore()
+				const exist = store.favorites.some((item) => item._id == fav._id)
 
-				//we have to loop the entire demo array to look for the respective index
-				//and change its color
-				const demo = store.demo.map((elm, i) => {
-					if (i === index) elm.background = color;
-					return elm;
-				});
+				if (exist) {
+					const newFav = store.favorites.filter((item) => item._id != fav._id)
+					setStore({
+						favorites: newFav
+					})
 
-				//reset the global store
-				setStore({ demo: demo });
+				} else {
+
+					setStore({
+						favorites: [...store.favorites, fav]
+					})
+
+				}
+
+
 			}
 		}
 	};
 };
 
 export default getState;
+
+
+
